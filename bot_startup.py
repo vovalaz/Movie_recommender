@@ -1,7 +1,6 @@
 import asyncio
 
-from tg_bot import document_handler
-from tg_bot import message_handler
+from tg_bot import message_handlers
 from tg_bot import drive_handlers
 
 from telebot import asyncio_filters

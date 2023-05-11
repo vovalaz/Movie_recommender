@@ -8,7 +8,7 @@ services:
         environment:
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=postgres
-            - POSTGRES_DB=google_drive_tg_bot_user
+            - POSTGRES_DB=movie_recommender_tg_bot
     bot:
         build:
             context: .
@@ -20,8 +20,7 @@ services:
             - .env
         depends_on:
             - db
-        ports:
-            - 8080:8080
+        
 
 volumes:
     postgres_data:

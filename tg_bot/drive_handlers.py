@@ -1,9 +1,7 @@
 import telebot
 
-from logs.logger import log
-from google_utils import drive
 from tg_bot.bot import bot
-from tg_bot.markup import cancel_markup, home_markup
+from tg_bot.markups import cancel_markup, home_markup
 from tg_bot.states import UploadStates
 
 
