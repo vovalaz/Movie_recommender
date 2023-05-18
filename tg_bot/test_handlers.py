@@ -5,7 +5,7 @@ from tg_bot.markups import cancel_markup, home_markup
 from tg_bot.states import UploadStates
 
 
-@bot.message_handler(state=UploadStates.drive_management, commands=["delete_expired"])
+@bot.message_handler(state=UploadStates.recommend_film, commands=["delete_expired"])
 async def set_expiration_handler(message: telebot.types.Message):
     await bot.send_message(
         message.chat.id,
@@ -35,7 +35,7 @@ async def delete_expired(message: telebot.types.Message):
     await bot.set_state(message.from_user.id, UploadStates.home_page, message.chat.id)
 
 
-@bot.message_handler(state=UploadStates.drive_management, commands=["clear_all"])
+@bot.message_handler(state=UploadStates.recommend_film, commands=["clear_all"])
 async def clear_all_files(message: telebot.types.Message):
     log.info("Deleting all files!")
     result_message = await bot.send_message(message.chat.id, "Deleting all files...")

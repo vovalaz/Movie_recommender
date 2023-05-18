@@ -2,8 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.selectable import Select
 
-from users.models import Message, UserInfo, Folder
-from users.database import engine
+from db.models import Message, UserInfo, Folder
+from db.database import engine
 
 
 Session = sessionmaker(bind=engine)

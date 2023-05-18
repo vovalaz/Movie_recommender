@@ -9,7 +9,10 @@ df = pd.read_json("movies.json")
 count_vectorizer = CountVectorizer(stop_words="english")
 
 # Preprocess the data
-df["features"] = df["genres"] + " " + df["title"] + " " + str(df["vote_average"])
+if df["cast"].empty and df["directors"].empty:
+    df["features"] = df["title"] + " " + df["cast"] + " " + df["directors"] + " " + df["genres"] + " " + str(df["vote_average"])
+else:
+    df["features"] = df["title"] + " " + df["genres"] + " " + str(df["vote_average"])
 features_matrix = count_vectorizer.fit_transform(df["features"])
 
 # Compute the cosine similarity matrix

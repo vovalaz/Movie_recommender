@@ -2,18 +2,18 @@ import telebot
 
 
 def home_markup():
-    upload_option_kb = telebot.types.ReplyKeyboardMarkup()
-    upload_option_kb.row("/upload_files", "/upload_zip", "/give_access", "/drive_management")
-    return upload_option_kb
+    home_keyboard = telebot.types.ReplyKeyboardMarkup()
+    home_keyboard.row("/recommend_film", "/test")
+    return home_keyboard
 
 
 def cancel_markup():
-    cancel_kb = telebot.types.ReplyKeyboardMarkup()
-    cancel_kb.row("/to_main_menu")
-    return cancel_kb
+    cancel_keyboard = telebot.types.ReplyKeyboardMarkup()
+    cancel_keyboard.row("/to_main_menu")
+    return cancel_keyboard
 
 
-def drive_management_markup():
-    drive_management_kb = telebot.types.ReplyKeyboardMarkup()
-    drive_management_kb.row("/delete_expired", "/clear_all")
-    return drive_management_kb
+def rating_markup():
+    rating_keyboard = telebot.types.ReplyKeyboardMarkup()
+    rating_keyboard.row("/skip", "1", "2", "3", "4", "5", "/end")
+    return rating_keyboard
