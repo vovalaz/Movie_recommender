@@ -1,148 +1,109 @@
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
 
-# Load the movie dataset
-ratings_data = pd.read_csv("movie_datasets/ratings_small.csv")
-movies_data = pd.read_csv("movie_datasets/movies_metadata.csv", low_memory=False)
-movies_data.rename(columns={"id": "movieId"}, inplace=True)
+# Sample user-item matrix (rows: users, columns: items)
+user_item_matrix = torch.tensor([
+    [5, 3, 0, 1, 4, 0],
+    [0, 0, 0, 4, 0, 0],
+    [4, 0, 0, 2, 0, 0],
+    [0, 1, 5, 4, 3, 0],
+    [0, 0, 4, 0, 0, 5],
+    [0, 0, 4, 0, 0, 0],
+    [0, 0, 0, 4, 0, 0]
+], dtype=torch.float)
 
-# Merge ratings and movies data
-merged_data = pd.merge(ratings_data, movies_data, on="movieId")
-
-# Split the data into train and test sets
-train_data, test_data = train_test_split(merged_data, test_size=0.2, random_state=42)
-
-# Create user and movie dictionaries
-user_dict = {uid: i for i, uid in enumerate(merged_data["userId"].unique())}
-movie_dict = {mid: i for i, mid in enumerate(merged_data["movieId"].unique())}
-
-# Number of users and movies
-num_users = len(user_dict)
-num_movies = len(movie_dict)
-
-
-# Define the dataset class
-class MovieLensDataset(Dataset):
-    def __init__(self, data, user_dict, movie_dict):
-        self.data = data
-        self.user_dict = user_dict
-        self.movie_dict = movie_dict
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        user = self.data.iloc[idx]["userId"]
-        movie = self.data.iloc[idx]["movieId"]
-        rating = self.data.iloc[idx]["rating"]
-
-        user_idx = self.user_dict[user]
-        movie_idx = self.movie_dict[movie]
-
-        return user_idx, movie_idx, rating
+# Sample item features matrix (rows: items, columns: features)
+item_features_matrix = torch.tensor([
+    [0.80, 0.50, 0.20],
+    [0.60, 0.70, 0.80],
+    [0.90, 0.40, 0.10],
+    [0.30, 0.60, 0.90],
+    [0.70, 0.20, 0.30],
+    [0.40, 0.90, 0.60]
+], dtype=torch.float)
 
 
-# Define the model
-class MatrixFactorizationModel(nn.Module):
-    def __init__(self, num_users, num_movies, embedding_dim=50):
-        super(MatrixFactorizationModel, self).__init__()
-
+# Collaborative filtering model
+class CollaborativeFiltering(nn.Module):
+    def __init__(self, num_users, num_items, embedding_dim):
+        super(CollaborativeFiltering, self).__init__()
         self.user_embedding = nn.Embedding(num_users, embedding_dim)
-        self.movie_embedding = nn.Embedding(num_movies, embedding_dim)
+        self.item_embedding = nn.Embedding(num_items, embedding_dim)
+        self.fc = nn.Linear(embedding_dim, 1)
 
-        self.fc1 = nn.Linear(embedding_dim * 2, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
-
-    def forward(self, user, movie):
-        user_embedding = self.user_embedding(user)
-        movie_embedding = self.movie_embedding(movie)
-
-        x = torch.cat((user_embedding, movie_embedding), dim=1)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-
-        return x.view(-1)
+    def forward(self, user_indices, item_indices):
+        user_embedded = self.user_embedding(user_indices)
+        item_embedded = self.item_embedding(item_indices)
+        user_item_embedded = torch.mul(user_embedded, item_embedded)
+        predicted_ratings = self.fc(user_item_embedded).squeeze()
+        return predicted_ratings
 
 
-# Create the dataset and data loaders
-train_dataset = MovieLensDataset(train_data, user_dict, movie_dict)
-test_dataset = MovieLensDataset(test_data, user_dict, movie_dict)
+# Content-based filtering model
+class ContentBasedFiltering(nn.Module):
+    def __init__(self, num_items, num_features, embedding_dim):
+        super(ContentBasedFiltering, self).__init__()
+        self.item_embedding = nn.Embedding(num_items, embedding_dim)
+        self.fc = nn.Linear(embedding_dim, 1)
 
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    def forward(self, item_indices):
+        item_embedded = self.item_embedding(item_indices)
+        predicted_ratings = self.fc(item_embedded).squeeze()
+        return predicted_ratings
 
-# Instantiate the model and define the loss function and optimizer
-model = MatrixFactorizationModel(num_users, num_movies)
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Train the model
-num_epochs = 10
+# Recommendation system combining collaborative and content-based filtering
+class RecommendationSystem(nn.Module):
+    def __init__(self, num_users, num_items, num_features, embedding_dim):
+        super(RecommendationSystem, self).__init__()
+        self.collaborative_model = CollaborativeFiltering(num_users, num_items, embedding_dim)
+        self.content_model = ContentBasedFiltering(num_items, num_features, embedding_dim)
 
-for epoch in range(num_epochs):
-    running_loss = 0.0
-    for user, movie, rating in train_dataloader:
+    def forward(self, user_indices, item_indices):
+        collaborative_ratings = self.collaborative_model(user_indices, item_indices)
+        content_ratings = self.content_model(item_indices)
+        combined_ratings = collaborative_ratings + content_ratings
+        return combined_ratings
+
+
+# Training loop
+def train_recommendation_system(model, user_item_matrix, item_features_matrix, num_epochs, learning_rate):
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    loss_fn = nn.MSELoss()
+
+    for epoch in range(num_epochs):
         optimizer.zero_grad()
-
-        user = user.long()
-        movie = movie.long()
-        rating = rating.float()
-
-        outputs = model(user, movie)
-        loss = criterion(outputs, rating)
-
+        user_indices, item_indices = torch.where(user_item_matrix != 0)
+        predicted_ratings = model(user_indices, item_indices)
+        true_ratings = user_item_matrix[user_indices, item_indices]
+        loss = loss_fn(predicted_ratings, true_ratings)
         loss.backward()
         optimizer.step()
-
-        running_loss += loss.item()
-
-    print(f"Epoch {epoch+1} loss: {running_loss / len(train_dataloader)}")
-
-# Evaluate the model
-model.eval()
-test_loss = 0.0
-
-with torch.no_grad():
-    for user, movie, rating in test_dataloader:
-        user = user.long()
-        movie = movie.long()
-        rating = rating.float()
-
-        outputs = model(user, movie)
-        loss = criterion(outputs, rating)
-
-        test_loss += loss.item()
-
-print(f"Test loss: {test_loss / len(test_dataloader)}")
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
 
 
-# Recommend movies for a user
-def recommend_movies(user_id, num_recommendations=5):
-    user_idx = user_dict[user_id]
-
-    user = torch.tensor([user_idx] * num_movies)
-    movies = torch.tensor(list(movie_dict.values()))
-
-    predictions = model(user, movies)
-    _, top_movies = torch.topk(predictions, num_recommendations)
-
-    top_movies = [k for k, v in movie_dict.items() if v in top_movies]
-    recommended_movies = movies_data[movies_data["movieId"].isin(top_movies)]
-
-    return recommended_movies[["title", "genres"]]
+# Generate recommendations
+def generate_recommendations(user_id, user_item_matrix, item_features_matrix, model, top_n=5):
+    user_indices = torch.tensor([user_id] * item_features_matrix.size(0))
+    item_indices = torch.tensor(range(item_features_matrix.size(0)))
+    predicted_ratings = model(user_indices, item_indices)
+    _, top_indices = torch.topk(predicted_ratings, top_n)
+    recommendations = top_indices.tolist()
+    return recommendations
 
 
-# Usage example
-user_id = 42
-recommendations = recommend_movies(user_id, num_recommendations=5)
-print(f"Recommended movies for user {user_id}:")
-print(recommendations)
+# Example usage
+num_users = user_item_matrix.size(0)
+num_items = user_item_matrix.size(1)
+num_features = item_features_matrix.size(1)
+embedding_dim = 10
+num_epochs = 100
+learning_rate = 0.01
 
-# Save the trained model
-torch.save(model.state_dict(), "movie_recommendation_model.pth")
+model = RecommendationSystem(num_users, num_items, num_features, embedding_dim)
+train_recommendation_system(model, user_item_matrix, item_features_matrix, num_epochs, learning_rate)
+
+user_id = 0
+recommendations = generate_recommendations(user_id, user_item_matrix, item_features_matrix, model)
+print(f"Recommendations for user {user_id}: {recommendations}")
