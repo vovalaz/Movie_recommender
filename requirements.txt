@@ -22,3 +22,5 @@ databases==0.6.2
 SQLAlchemy==1.4.41
 structlog==22.3.0
 apiclient==1.0.4
+tez==0.7.2
+scikit-learn==1.2.2
