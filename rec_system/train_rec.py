@@ -1,109 +1,76 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-
-# Sample user-item matrix (rows: users, columns: items)
-user_item_matrix = torch.tensor([
-    [5, 3, 0, 1, 4, 0],
-    [0, 0, 0, 4, 0, 0],
-    [4, 0, 0, 2, 0, 0],
-    [0, 1, 5, 4, 3, 0],
-    [0, 0, 4, 0, 0, 5],
-    [0, 0, 4, 0, 0, 0],
-    [0, 0, 0, 4, 0, 0]
-], dtype=torch.float)
-
-# Sample item features matrix (rows: items, columns: features)
-item_features_matrix = torch.tensor([
-    [0.80, 0.50, 0.20],
-    [0.60, 0.70, 0.80],
-    [0.90, 0.40, 0.10],
-    [0.30, 0.60, 0.90],
-    [0.70, 0.20, 0.30],
-    [0.40, 0.90, 0.60]
-], dtype=torch.float)
+import torch.nn.functional as F
+import pandas as pd
 
 
-# Collaborative filtering model
-class CollaborativeFiltering(nn.Module):
+class RecommendationModel(nn.Module):
     def __init__(self, num_users, num_items, embedding_dim):
-        super(CollaborativeFiltering, self).__init__()
+        super(RecommendationModel, self).__init__()
+
         self.user_embedding = nn.Embedding(num_users, embedding_dim)
         self.item_embedding = nn.Embedding(num_items, embedding_dim)
-        self.fc = nn.Linear(embedding_dim, 1)
+        self.user_content_embedding = nn.Embedding(num_users, embedding_dim)
+        self.item_content_embedding = nn.Embedding(num_items, embedding_dim)
+        self.fc1 = nn.Linear(embedding_dim, 64)
+        self.fc2 = nn.Linear(64, embedding_dim)
 
     def forward(self, user_indices, item_indices):
-        user_embedded = self.user_embedding(user_indices)
-        item_embedded = self.item_embedding(item_indices)
-        user_item_embedded = torch.mul(user_embedded, item_embedded)
-        predicted_ratings = self.fc(user_item_embedded).squeeze()
-        return predicted_ratings
+        user_embed = self.user_embedding(user_indices)
+        item_embed = self.item_embedding(item_indices)
+        cf_output = torch.sum(user_embed * item_embed, dim=1)
+
+        user_content_embed = self.user_content_embedding(user_indices)
+        item_content_embed = self.item_content_embedding(item_indices)
+        cb_input = torch.cat((user_content_embed, item_content_embed), dim=1)
+        cb_output = F.relu(self.fc1(cb_input))
+        cb_output = self.fc2(cb_output)
+
+        output = cf_output + cb_output
+
+        return output
 
 
-# Content-based filtering model
-class ContentBasedFiltering(nn.Module):
-    def __init__(self, num_items, num_features, embedding_dim):
-        super(ContentBasedFiltering, self).__init__()
-        self.item_embedding = nn.Embedding(num_items, embedding_dim)
-        self.fc = nn.Linear(embedding_dim, 1)
+# Load movie details from CSV
+movies_df = pd.read_csv("movies.csv")
+num_movies = len(movies_df)
 
-    def forward(self, item_indices):
-        item_embedded = self.item_embedding(item_indices)
-        predicted_ratings = self.fc(item_embedded).squeeze()
-        return predicted_ratings
+# Load user movie ratings from CSV
+ratings_df = pd.read_csv("ratings.csv")
+num_users = ratings_df["user_id"].nunique()
 
+# Map movie and user IDs to sequential indices
+movies_df["movie_index"] = pd.factorize(movies_df["movie_id"])[0]
+ratings_df["user_index"] = pd.factorize(ratings_df["user_id"])[0]
+ratings_df["movie_index"] = pd.factorize(ratings_df["movie_id"])[0]
 
-# Recommendation system combining collaborative and content-based filtering
-class RecommendationSystem(nn.Module):
-    def __init__(self, num_users, num_items, num_features, embedding_dim):
-        super(RecommendationSystem, self).__init__()
-        self.collaborative_model = CollaborativeFiltering(num_users, num_items, embedding_dim)
-        self.content_model = ContentBasedFiltering(num_items, num_features, embedding_dim)
+# Prepare the data for training
+user_indices = torch.tensor(ratings_df["user_index"].values, dtype=torch.long)
+item_indices = torch.tensor(ratings_df["movie_index"].values, dtype=torch.long)
+ratings = torch.tensor(ratings_df["rating"].values, dtype=torch.float32)
 
-    def forward(self, user_indices, item_indices):
-        collaborative_ratings = self.collaborative_model(user_indices, item_indices)
-        content_ratings = self.content_model(item_indices)
-        combined_ratings = collaborative_ratings + content_ratings
-        return combined_ratings
+# Initialize the model
+embedding_dim = 128
+model = RecommendationModel(num_users, num_movies, embedding_dim)
 
+# Define the loss function and optimizer
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 # Training loop
-def train_recommendation_system(model, user_item_matrix, item_features_matrix, num_epochs, learning_rate):
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    loss_fn = nn.MSELoss()
+num_epochs = 10
+for epoch in range(num_epochs):
+    optimizer.zero_grad()
 
-    for epoch in range(num_epochs):
-        optimizer.zero_grad()
-        user_indices, item_indices = torch.where(user_item_matrix != 0)
-        predicted_ratings = model(user_indices, item_indices)
-        true_ratings = user_item_matrix[user_indices, item_indices]
-        loss = loss_fn(predicted_ratings, true_ratings)
-        loss.backward()
-        optimizer.step()
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
+    # Forward pass
+    outputs = model(user_indices, item_indices)
 
+    # Compute the loss
+    loss = criterion(outputs, ratings)
 
-# Generate recommendations
-def generate_recommendations(user_id, user_item_matrix, item_features_matrix, model, top_n=5):
-    user_indices = torch.tensor([user_id] * item_features_matrix.size(0))
-    item_indices = torch.tensor(range(item_features_matrix.size(0)))
-    predicted_ratings = model(user_indices, item_indices)
-    _, top_indices = torch.topk(predicted_ratings, top_n)
-    recommendations = top_indices.tolist()
-    return recommendations
+    # Backward pass and optimization
+    loss.backward()
+    optimizer.step()
 
-
-# Example usage
-num_users = user_item_matrix.size(0)
-num_items = user_item_matrix.size(1)
-num_features = item_features_matrix.size(1)
-embedding_dim = 10
-num_epochs = 100
-learning_rate = 0.01
-
-model = RecommendationSystem(num_users, num_items, num_features, embedding_dim)
-train_recommendation_system(model, user_item_matrix, item_features_matrix, num_epochs, learning_rate)
-
-user_id = 0
-recommendations = generate_recommendations(user_id, user_item_matrix, item_features_matrix, model)
-print(f"Recommendations for user {user_id}: {recommendations}")
+    # Print the loss for every epoch
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
