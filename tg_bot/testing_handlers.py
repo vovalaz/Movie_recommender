@@ -1,42 +1,42 @@
 import telebot
+import random
 
 from tg_bot.bot import bot
-from tg_bot.markups import cancel_markup, home_markup
-from tg_bot.states import UploadStates
+from tg_bot import markups
+from tg_bot.states import TestStates
+from db import orm
 
 
-@bot.message_handler(state=UploadStates.recommend_film, commands=["delete_expired"])
-async def set_expiration_handler(message: telebot.types.Message):
-    await bot.send_message(
-        message.chat.id,
-        "Send files lifetime (in days)\nBot will delete expired files from drive",
-        reply_markup=cancel_markup(),
-    )
-    await bot.set_state(message.from_user.id, UploadStates.setting_expiration, message.chat.id)
-
-
-@bot.message_handler(state=UploadStates.setting_expiration)
-async def delete_expired(message: telebot.types.Message):
-    if not message.text.isnumeric():
-        await bot.send_message(message.chat.id, "Message must contain only one integer")
+@bot.message_handler(state=TestStates.test)
+async def test_handler(message: telebot.types.Message):
+    if message.text == "/end":
+        pass
+    elif message.text == "/skip":
+        movie_title = orm.get_last_message_by_chat_id(message.chat.id).message_text
+        movie_id = orm.get_movie_by_title(movie_title).movie_id
+        user_id = orm.get_user_by_username(message.from_user.username).user_id
+        orm.create_movie_user(movie_id, user_id, None)
+    elif message.text == "/start_test":
+        movie = orm.get_movie(random.randint(1, 500))
+        for movie in orm.list_movies_rated_by_user(orm.get_user_by_username(message.from_user.username).user_id):
+            print(f"Rating = {movie.rating}")
+        while movie in orm.list_movies_rated_by_user(orm.get_user_by_username(message.from_user.username).user_id):
+            movie = orm.get_movie(random.randint(1, 500))
         await bot.send_message(
-            message.chat.id, "Message must contain only one integer\nChoose other option", reply_markup=home_markup()
+            message.chat.id,
+            "Rate this film:",
+            reply_markup=markups.rating_markup(),
         )
-        await bot.set_state(message.from_user.id, UploadStates.home_page, message.chat.id)
-        return
-    result_message = await bot.send_message(message.chat.id, "Deleting expired files...")
-    await bot.edit_message_text(
-        chat_id=message.chat.id, message_id=result_message.id, text="Successfully deleted expired files"
-    )
-    await bot.send_message(message.chat.id, "Choose next action", reply_markup=home_markup())
-    await bot.set_state(message.from_user.id, UploadStates.home_page, message.chat.id)
-
-
-@bot.message_handler(state=UploadStates.recommend_film, commands=["clear_all"])
-async def clear_all_files(message: telebot.types.Message):
-    result_message = await bot.send_message(message.chat.id, "Deleting all files...")
-    await bot.edit_message_text(
-        chat_id=message.chat.id, message_id=result_message.id, text="Successfully deleted all files\nChoose next action"
-    )
-    await bot.set_state(message.from_user.id, UploadStates.home_page, message.chat.id)
-    await bot.send_message(message.chat.id, "Choose next action", reply_markup=home_markup())
+        sent_movie_title = await bot.send_message(
+            message.chat.id,
+            str(movie.title),
+            reply_markup=markups.rating_markup(),
+        )
+        orm.create_message(
+            orm.get_user_by_username(message.from_user.username).user_id,
+            sent_movie_title.text,
+            sent_movie_title.chat.id,
+            True,
+        )
+    elif message.text.isnumeric():
+        pass

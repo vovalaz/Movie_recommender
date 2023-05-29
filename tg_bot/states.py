@@ -1,10 +1,8 @@
 from telebot.asyncio_handler_backends import State, StatesGroup
 
 
-class UploadStates(StatesGroup):
+class TestStates(StatesGroup):
     home_page = State()
     recommend_film = State()
-    direct_upload = State()
-    zip_upload = State()
-    give_access = State()
-    setting_expiration = State()
+    test = State()
+    q1 = State()

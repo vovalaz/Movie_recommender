@@ -13,6 +13,12 @@ def cancel_markup():
     return cancel_keyboard
 
 
+def confirm_test_markup():
+    cancel_keyboard = telebot.types.ReplyKeyboardMarkup()
+    cancel_keyboard.row("/start_test")
+    return cancel_keyboard
+
+
 def rating_markup():
     rating_keyboard = telebot.types.ReplyKeyboardMarkup()
     rating_keyboard.row("/skip", "1", "2", "3", "4", "5", "/end")
