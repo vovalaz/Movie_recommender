@@ -46,7 +46,7 @@ def train_model(model, data, num_epochs, learning_rate):
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
 
 
-def generate_movie_recommendations(model, user_id, top_k=5):
+def generate_movie_recommendations(model, user_id, ratings_list, top_k=5):
     user_id = torch.tensor(user_id, dtype=torch.long)
 
     user_embedding = model.user_embedding(user_id)
@@ -56,12 +56,37 @@ def generate_movie_recommendations(model, user_id, top_k=5):
 
     similarity_scores = torch.cosine_similarity(user_embedding, movie_embeddings, dim=1)
 
+    # Set the ratings of the given movie IDs to zero
+    for rating_tuple in ratings_list:
+        movie_id = rating_tuple[1]
+        movie_embeddings[movie_id] = 0
+
+    similarity_scores = torch.cosine_similarity(user_embedding, movie_embeddings, dim=1)
+
     top_indices = torch.topk(similarity_scores, k=top_k).indices
 
     movie_recommendations = [
         movies_data.loc[movies_data["movie_id"] == idx.item(), "title"].values[0] for idx in top_indices
     ]
     return movie_recommendations
+
+
+# def generate_movie_recommendations(model, user_id, top_k=5):
+#     user_id = torch.tensor(user_id, dtype=torch.long)
+
+#     user_embedding = model.user_embedding(user_id)
+
+#     all_movie_ids = torch.arange(model.movie_embedding.num_embeddings, dtype=torch.long)
+#     movie_embeddings = model.movie_embedding(all_movie_ids)
+
+#     similarity_scores = torch.cosine_similarity(user_embedding, movie_embeddings, dim=1)
+
+#     top_indices = torch.topk(similarity_scores, k=top_k).indices
+
+#     movie_recommendations = [
+#         movies_data.loc[movies_data["movie_id"] == idx.item(), "title"].values[0] for idx in top_indices
+#     ]
+#     return movie_recommendations
 
 
 def continuous_train(new_data, num_epochs, learning_rate):

@@ -75,6 +75,11 @@ def get_movie(movie_id):
     return session.query(Movie).get(movie_id)
 
 
+def get_movie_link_by_title(title):
+    film_id = session.query(Movie).filter(Movie.title == title).first().id
+    return f"https://www.themoviedb.org/movie/{film_id}"
+
+
 def get_movie_user(movie_id, user_id):
     return session.query(MovieUser).filter_by(movie_id=movie_id, user_id=user_id).first()
 

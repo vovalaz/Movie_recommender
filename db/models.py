@@ -19,7 +19,7 @@ class Message(Base):
 class UserInfo(Base):
     __tablename__ = "userinfo"
 
-    user_id = Column(Integer, primary_key=True, server_default="0")
+    user_id = Column(Integer, primary_key=True)
     username = Column(String(255))
 
 
