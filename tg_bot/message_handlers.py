@@ -33,7 +33,7 @@ async def test_start_handler(message: telebot.types.Message):
     await bot.set_state(message.from_user.id, TestStates.test, message.chat.id)
     await bot.send_message(
         message.chat.id,
-        "You will be prompted to rate the films to create your personalized recommendations",
+        "You will be prompted to rate the films from 0 to 10 to create your personalized recommendations.\nYou can end rating films at any moment all progress will be saved",
         reply_markup=markups.confirm_test_markup(),
     )
     orm.create_user_if_not_exists(message.from_user.username)

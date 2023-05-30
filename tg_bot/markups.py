@@ -21,5 +21,5 @@ def confirm_test_markup():
 
 def rating_markup():
     rating_keyboard = telebot.types.ReplyKeyboardMarkup()
-    rating_keyboard.row("/skip", "1", "2", "3", "4", "5", "/end")
+    rating_keyboard.row("/skip", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "/end")
     return rating_keyboard

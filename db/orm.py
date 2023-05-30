@@ -1,5 +1,4 @@
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import IntegrityError
 from db.models import Message, MovieUser, Movie, UserInfo
 from db.database import engine
 
@@ -90,7 +89,7 @@ def get_movie_by_title(title):
     return movie
 
 
-def create_or_update_movie_user(session, movie_id, user_id, rating):
+def create_or_update_movie_user(movie_id, user_id, rating):
     movie_user = session.query(MovieUser).filter(MovieUser.movie_id == movie_id, MovieUser.user_id == user_id).first()
 
     if movie_user:

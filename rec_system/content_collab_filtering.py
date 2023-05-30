@@ -64,7 +64,10 @@ def generate_movie_recommendations(model, user_id, top_k=5):
     return movie_recommendations
 
 
-def continuous_train(model, new_data, num_epochs, learning_rate):
+def continuous_train(new_data, num_epochs, learning_rate):
+    model = RecommendationSystem(num_users, num_movies, embedding_dim)
+    model.load_state_dict(torch.load("content_collab_model.pt"))
+
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -85,6 +88,7 @@ def continuous_train(model, new_data, num_epochs, learning_rate):
 
         avg_loss = total_loss / len(new_data)
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
+    torch.save(model.state_dict(), "content_collab_model.pt")
 
 
 num_users = max(ratings_data["user_id"]) + 1
