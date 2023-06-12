@@ -9,14 +9,14 @@ from tg_bot.states import TestStates
 
 @bot.message_handler(state=TestStates.test)
 async def test_handler(message: telebot.types.Message):
-    if message.text == "/start_test":
+    if message.text == "/почати_опитування":
         movie = orm.get_movie(random.randint(1, 500))
         while movie in orm.list_movies_rated_by_user(orm.get_user_by_username(message.from_user.username).user_id):
             movie = orm.get_movie(random.randint(1, 500))
 
         await bot.send_message(
             message.chat.id,
-            "Rate this film:",
+            "Оцініть цей фільм:",
         )
         sent_movie_title = await bot.send_message(
             message.chat.id,
@@ -30,11 +30,11 @@ async def test_handler(message: telebot.types.Message):
             sent_movie_title.chat.id,
             True,
         )
-    elif message.text == "/end":
+    elif message.text == "/закінчити":
         await bot.set_state(message.from_user.id, TestStates.home_page, message.chat.id)
-        await bot.reply_to(message, "Ratings saved.\nWhat you want to do next?", reply_markup=markups.rec_markup())
+        await bot.reply_to(message, "Рейтинги збережено.\nОберіть наступну дію", reply_markup=markups.rec_markup())
 
-    elif message.text == "/dont_recommend":
+    elif message.text == "/не_рекомендувати":
         movie_title = orm.get_last_message_by_chat_id(message.chat.id).message_text
         movie_id = orm.get_movie_by_title(movie_title).movie_id
         user_id = orm.get_user_by_username(message.from_user.username).user_id
@@ -46,7 +46,7 @@ async def test_handler(message: telebot.types.Message):
 
         await bot.send_message(
             message.chat.id,
-            "Previous film will not be suggested in tests anymore.\nRate this film:",
+            "Попередній фільм більше не буде пропонуватись в опитуванні.\nОцініть цей фільм:",
         )
         sent_movie_title = await bot.send_message(
             message.chat.id,
@@ -60,14 +60,14 @@ async def test_handler(message: telebot.types.Message):
             sent_movie_title.chat.id,
             True,
         )
-    elif message.text == "/skip":
+    elif message.text == "/пропустити":
         movie = orm.get_movie(random.randint(1, 500))
         while movie in orm.list_movies_rated_by_user(orm.get_user_by_username(message.from_user.username).user_id):
             movie = orm.get_movie(random.randint(1, 500))
 
         await bot.send_message(
             message.chat.id,
-            "Skipped previous film.\nRate this film:",
+            "Попередній фільм було пропущено.\nОцініть цей фільм:",
         )
         sent_movie_title = await bot.send_message(
             message.chat.id,
@@ -95,7 +95,7 @@ async def test_handler(message: telebot.types.Message):
 
             await bot.send_message(
                 message.chat.id,
-                "Rate this film:",
+                "Оцініть цей фільм:",
             )
             sent_movie_title = await bot.send_message(
                 message.chat.id,
@@ -112,7 +112,7 @@ async def test_handler(message: telebot.types.Message):
         else:
             await bot.send_message(
                 message.chat.id,
-                "Rating you provide should be in [0, 10] range to be processed properly\nRate this film again:",
+                "Рейтинг фільму повинен бути в межах [0, 10]\nОцініть цей фільм:",
             )
             movie_title = orm.get_last_message_by_chat_id(message.chat.id).message_text
             sent_movie_title = await bot.send_message(
