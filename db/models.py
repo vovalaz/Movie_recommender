@@ -1,11 +1,12 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Float, Integer, Date, Text, Boolean
 
-
+# Base model
 Base = declarative_base()
 metadata = Base.metadata
 
 
+# Message model
 class Message(Base):
     __tablename__ = "message"
 
@@ -16,6 +17,7 @@ class Message(Base):
     from_bot = Column(Boolean)
 
 
+# User model
 class UserInfo(Base):
     __tablename__ = "userinfo"
 
@@ -23,6 +25,7 @@ class UserInfo(Base):
     username = Column(String(255))
 
 
+# Movie model
 class Movie(Base):
     __tablename__ = "movie"
     movie_id = Column(Integer, primary_key=True)
@@ -37,6 +40,7 @@ class Movie(Base):
     directors = Column(Text, nullable=True)
 
 
+# Many to many movie-user relation table
 class MovieUser(Base):
     __tablename__ = "movieuser"
 
